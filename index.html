@@ -107,7 +107,7 @@
     <label>Último dia útil do mês (dd/mm/aaaa)</label>
     <input id="dataFim" />
 
-    <label>Feriados (dd/mm/aaaa separados por vírgula)</label>
+    <label>Feriados (dd/mm/aaaa separados por vírgula; lembre de incluir todos os feriados a partir da atual data até o vencimento, ou seja, incluir feriados em começo de mês)</label>
     <input id="feriados" />
 
     <hr />
@@ -211,7 +211,7 @@
           if (isBusinessDay(d, feriados)) du++;
           d.setDate(d.getDate() + 1);
         }
-
+        
         // cálculos financeiros
         let spot = dolarFuturo - dolarCasado / 1000;
 
