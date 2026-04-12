@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Casado Terminal</title>
+
+    <style>
+      body {
+        background-color: #0b0f14;
+        color: #d6d6d6;
+        font-family: "Courier New", monospace;
+        max-width: 700px;
+        margin: auto;
+        padding: 20px;
+      }
+
+      h2 {
+        color: #00ff88;
+        letter-spacing: 2px;
+        font-size: 18px;
+        margin-bottom: 20px;
+      }
+
+      label {
+        font-size: 12px;
+        color: #7aa2ff;
+      }
+
+      input {
+        width: 100%;
+        margin-bottom: 12px;
+        padding: 10px;
+        background: #111722;
+        border: 1px solid #2a3441;
+        color: #d6d6d6;
+        font-family: monospace;
+        outline: none;
+      }
+
+      input:focus {
+        border-color: #00ff88;
+      }
+
+      button {
+        padding: 12px;
+        width: 100%;
+        background: #00ff88;
+        color: #0b0f14;
+        font-weight: bold;
+        border: none;
+        cursor: pointer;
+        margin-top: 10px;
+      }
+
+      button:hover {
+        background: #00cc6a;
+      }
+
+      .resultado {
+        margin-top: 25px;
+        padding: 15px;
+        border: 1px solid #2a3441;
+        background: #0f1621;
+      }
+
+      .label {
+        font-size: 12px;
+        color: #7aa2ff;
+        margin-top: 10px;
+      }
+
+      .value {
+        font-size: 22px;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+
+      .green {
+        color: #00ff88;
+      }
+
+      .yellow {
+        color: #ffd400;
+      }
+
+      .orange {
+        color: #ff7a00;
+      }
+
+      .red {
+        color: #ff4d4d;
+      }
+
+      hr {
+        border: 1px solid #1c2430;
+        margin: 20px 0;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h2>CASADO TERMINAL //</h2>
+
+    <label>Data Inicial (dd/mm/aaaa)</label>
+    <input id="dataInicio" />
+
+    <label>Último dia útil do mês (dd/mm/aaaa)</label>
+    <input id="dataFim" />
+
+    <label>Feriados (dd/mm/aaaa separados por vírgula)</label>
+    <input id="feriados" />
+
+    <hr />
+
+    <label>Dólar Futuro (em ponto, ex.: 5.0330) </label>
+    <input id="dolarFuturo" />
+
+    <label>CDI (em ponto, ex.: 0.1465)</label>
+    <input id="cdi" />
+
+    <label>Dólar Casado (em ponto, ex.: 21.30)</label>
+    <input id="dolarCasado" />
+
+    <label>Fed Funds (em ponto, ex.: 3.64)</label>
+    <input id="fedFunds" />
+
+    <button onclick="calcular()">CALCULAR</button>
+
+    <div class="resultado" id="resultado"></div>
+
+    <script>
+      // =========================
+      // UTILITÁRIOS DE DATA
+      // =========================
+
+      function parseDate(str) {
+        let [d, m, y] = str.split("/");
+        return new Date(y, m - 1, d);
+      }
+
+      function isBusinessDay(date, feriados) {
+        let day = date.getDay();
+        let iso = date.toISOString().split("T")[0];
+        return day !== 0 && day !== 6 && !feriados.includes(iso);
+      }
+
+      function addBusinessDays(date, days, feriados) {
+        let count = 0;
+        let d = new Date(date);
+
+        while (count < days) {
+          d.setDate(d.getDate() + 1);
+          if (isBusinessDay(d, feriados)) {
+            count++;
+          }
+        }
+
+        return d;
+      }
+
+      // =========================
+      // COR DO SPREAD
+      // =========================
+
+      function corSpread(spread) {
+        if (spread > 2.0) {
+          return "red";
+        } else if (spread > 1.8) {
+          return "orange";
+        } else if (spread > 1.5) {
+          return "yellow";
+        } else {
+          return "green";
+        }
+      }
+
+      // =========================
+      // CÁLCULO PRINCIPAL
+      // =========================
+
+      function calcular() {
+        let dataInicio = parseDate(document.getElementById("dataInicio").value);
+        let dataFim = parseDate(document.getElementById("dataFim").value);
+
+        let feriados = document
+          .getElementById("feriados")
+          .value.split(",")
+          .map((d) => parseDate(d.trim()).toISOString().split("T")[0]);
+
+        let dolarFuturo = parseFloat(
+          document.getElementById("dolarFuturo").value
+        );
+        let cdi = parseFloat(document.getElementById("cdi").value);
+        let dolarCasado = parseFloat(
+          document.getElementById("dolarCasado").value
+        );
+        let fedFunds = parseFloat(document.getElementById("fedFunds").value);
+
+        // D+2
+        let inicioD2 = addBusinessDays(dataInicio, 2, feriados);
+        let fimD2 = addBusinessDays(dataFim, 2, feriados);
+
+        // contagem
+        let dc = 0;
+        let du = 0;
+
+        let d = new Date(inicioD2);
+
+        while (d < fimD2) {
+          dc++;
+          if (isBusinessDay(d, feriados)) du++;
+          d.setDate(d.getDate() + 1);
+        }
+
+        // cálculos financeiros
+        let spot = dolarFuturo - dolarCasado / 1000;
+
+        let taxa =
+          (360 / dc) *
+          ((spot * Math.pow(1 + cdi, du / 252)) / (dolarFuturo - 0.0002) - 1);
+
+        let taxaPct = taxa * 100;
+        let spread = taxaPct - fedFunds;
+
+        // saída final
+        document.getElementById("resultado").innerHTML = `
+          
+          <div class="label">SPOT</div>
+          <div class="value">${spot.toFixed(6)}</div>
+
+          <div class="label">TAXA DO CASADO</div>
+          <div class="value green">${taxaPct.toFixed(2)}%</div>
+
+          <div class="label">SPREAD</div>
+          <div class="value ${corSpread(spread)}">${spread.toFixed(2)}%</div>
+
+        `;
+      }
+    </script>
+  </body>
+</html>
