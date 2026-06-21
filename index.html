@@ -1,241 +1,205 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Casado Terminal</title>
+<head>
+<meta charset="UTF-8" />
+<title>Casado Terminal v2</title>
 
-    <style>
-      body {
-        background-color: #0b0f14;
-        color: #d6d6d6;
-        font-family: "Courier New", monospace;
-        max-width: 700px;
-        margin: auto;
-        padding: 20px;
-      }
+<!-- Biblioteca de feriados -->
+<script src="https://cdn.jsdelivr.net/npm/date-holidays@3.23.15/dist/index.umd.min.js"></script>
 
-      h2 {
-        color: #00ff88;
-        letter-spacing: 2px;
-        font-size: 18px;
-        margin-bottom: 20px;
-      }
+<style>
+body {
+  background: #0b0f14;
+  color: #d6d6d6;
+  font-family: "Courier New", monospace;
+  max-width: 750px;
+  margin: auto;
+  padding: 20px;
+}
 
-      label {
-        font-size: 12px;
-        color: #7aa2ff;
-      }
+h2 {
+  color: #00ff88;
+  letter-spacing: 2px;
+}
 
-      input {
-        width: 100%;
-        margin-bottom: 12px;
-        padding: 10px;
-        background: #111722;
-        border: 1px solid #2a3441;
-        color: #d6d6d6;
-        font-family: monospace;
-        outline: none;
-      }
+label {
+  font-size: 12px;
+  color: #7aa2ff;
+}
 
-      input:focus {
-        border-color: #00ff88;
-      }
+input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  background: #111722;
+  border: 1px solid #2a3441;
+  color: #d6d6d6;
+}
 
-      button {
-        padding: 12px;
-        width: 100%;
-        background: #00ff88;
-        color: #0b0f14;
-        font-weight: bold;
-        border: none;
-        cursor: pointer;
-        margin-top: 10px;
-      }
+button {
+  width: 100%;
+  padding: 12px;
+  background: #00ff88;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+}
 
-      button:hover {
-        background: #00cc6a;
-      }
+button:hover {
+  background: #00cc6a;
+}
 
-      .resultado {
-        margin-top: 25px;
-        padding: 15px;
-        border: 1px solid #2a3441;
-        background: #0f1621;
-      }
+.box {
+  margin-top: 20px;
+  padding: 15px;
+  border: 1px solid #2a3441;
+  background: #0f1621;
+}
 
-      .label {
-        font-size: 12px;
-        color: #7aa2ff;
-        margin-top: 10px;
-      }
+.label {
+  font-size: 12px;
+  color: #7aa2ff;
+}
 
-      .value {
-        font-size: 22px;
-        font-weight: bold;
-        margin-bottom: 10px;
-      }
+.value {
+  font-size: 22px;
+  font-weight: bold;
+}
 
-      .green {
-        color: #00ff88;
-      }
+.green { color: #00ff88; }
+.yellow { color: #ffd400; }
+.orange { color: #ff7a00; }
+.red { color: #ff4d4d; }
+</style>
+</head>
 
-      .yellow {
-        color: #ffd400;
-      }
+<body>
 
-      .orange {
-        color: #ff7a00;
-      }
+<h2>CASADO TERMINAL v2 //</h2>
 
-      .red {
-        color: #ff4d4d;
-      }
+<label>Data Inicial (dd/mm/aaaa)</label>
+<input id="inicio">
 
-      hr {
-        border: 1px solid #1c2430;
-        margin: 20px 0;
-      }
-    </style>
-  </head>
+<label>Último dia útil do mês</label>
+<input id="fim">
 
-  <body>
-    <h2>CASADO TERMINAL //</h2>
+<label>Dólar Futuro</label>
+<input id="futuro">
 
-    <label>Data Inicial (dd/mm/aaaa)</label>
-    <input id="dataInicio" />
+<label>CDI (ex: 0.1465)</label>
+<input id="cdi">
 
-    <label>Último dia útil do mês (dd/mm/aaaa)</label>
-    <input id="dataFim" />
+<label>Dólar Casado</label>
+<input id="casado">
 
-    <label>Feriados do mês e D+2 (dd/mm/aaaa separados por vírgula, ex.: 21/04/2026, 01/05/2026)</label>
-    <input id="feriados" />
+<label>Fed Funds (%)</label>
+<input id="fed">
 
-    <hr />
+<button onclick="calc()">CALCULAR</button>
+<button onclick="copiar()">COPIAR RESULTADO</button>
 
-    <label>Dólar Futuro (em ponto, ex.: 5.0330) </label>
-    <input id="dolarFuturo" />
+<div class="box" id="out"></div>
 
-    <label>CDI (em ponto, ex.: 0.1465)</label>
-    <input id="cdi" />
+<script>
 
-    <label>Dólar Casado (em ponto, ex.: 21.30)</label>
-    <input id="dolarCasado" />
+const hdBR = new Holidays('BR');
+const hdUS = new Holidays('US');
 
-    <label>Fed Funds (em ponto, ex.: 3.64)</label>
-    <input id="fedFunds" />
+function parse(d){
+  let [day,mon,year] = d.split("/");
+  return new Date(year, mon-1, day);
+}
 
-    <button onclick="calcular()">CALCULAR</button>
+function isWeekend(d){
+  return d.getDay() === 0 || d.getDay() === 6;
+}
 
-    <div class="resultado" id="resultado"></div>
+// BR business day (CDI)
+function isBR(d){
+  return !isWeekend(d) && !hdBR.isHoliday(d);
+}
 
-    <script>
-      // =========================
-      // UTILITÁRIOS DE DATA
-      // =========================
+// USD settlement (BR + US)
+function isSettle(d){
+  return !isWeekend(d) && !hdBR.isHoliday(d) && !hdUS.isHoliday(d);
+}
 
-      function parseDate(str) {
-        let [d, m, y] = str.split("/");
-        return new Date(y, m - 1, d);
-      }
+function addBizDays(date, n, fn){
+  let c = 0;
+  let d = new Date(date);
 
-      function isBusinessDay(date, feriados) {
-        let day = date.getDay();
-        let iso = date.toISOString().split("T")[0];
-        return day !== 0 && day !== 6 && !feriados.includes(iso);
-      }
+  while(c < n){
+    d.setDate(d.getDate()+1);
+    if(fn(d)) c++;
+  }
+  return d;
+}
 
-      function addBusinessDays(date, days, feriados) {
-        let count = 0;
-        let d = new Date(date);
+function spreadColor(x){
+  if(x > 2.0) return "red";
+  if(x > 1.8) return "orange";
+  if(x > 1.5) return "yellow";
+  return "green";
+}
 
-        while (count < days) {
-          d.setDate(d.getDate() + 1);
-          if (isBusinessDay(d, feriados)) {
-            count++;
-          }
-        }
+let lastResult = "";
 
-        return d;
-      }
+function calc(){
 
-      // =========================
-      // COR DO SPREAD
-      // =========================
+  let ini = parse(document.getElementById("inicio").value);
+  let fim = parse(document.getElementById("fim").value);
 
-      function corSpread(spread) {
-        if (spread > 2.0) {
-          return "red";
-        } else if (spread > 1.8) {
-          return "orange";
-        } else if (spread > 1.5) {
-          return "yellow";
-        } else {
-          return "green";
-        }
-      }
+  let fut = parseFloat(document.getElementById("futuro").value);
+  let cdi = parseFloat(document.getElementById("cdi").value);
+  let cas = parseFloat(document.getElementById("casado").value);
+  let fed = parseFloat(document.getElementById("fed").value);
 
-      // =========================
-      // CÁLCULO PRINCIPAL
-      // =========================
+  // D+2 settlement
+  let ini2 = addBizDays(ini,2,isSettle);
+  let fim2 = addBizDays(fim,2,isSettle);
 
-      function calcular() {
-        let dataInicio = parseDate(document.getElementById("dataInicio").value);
-        let dataFim = parseDate(document.getElementById("dataFim").value);
+  let dc = 0;
+  let du = 0;
 
-        let feriados = document
-          .getElementById("feriados")
-          .value.split(",")
-          .map((d) => parseDate(d.trim()).toISOString().split("T")[0]);
+  let d = new Date(ini2);
 
-        let dolarFuturo = parseFloat(
-          document.getElementById("dolarFuturo").value
-        );
-        let cdi = parseFloat(document.getElementById("cdi").value);
-        let dolarCasado = parseFloat(
-          document.getElementById("dolarCasado").value
-        );
-        let fedFunds = parseFloat(document.getElementById("fedFunds").value);
+  while(d < fim2){
+    dc++;
+    if(isBR(d)) du++;
+    d.setDate(d.getDate()+1);
+  }
 
-        // D+2
-        let inicioD2 = addBusinessDays(dataInicio, 2, feriados);
-        let fimD2 = addBusinessDays(dataFim, 2, feriados);
+  let spot = fut - (cas/1000);
 
-        // contagem
-        let dc = 0;
-        let du = 0;
+  let taxa = (360/dc) * (
+    (spot * Math.pow(1+cdi, du/252)) / (fut - 0.0002) - 1
+  );
 
-        let d = new Date(inicioD2);
+  let taxaPct = taxa * 100;
+  let spread = taxaPct - fed;
 
-        while (d < fimD2) {
-          dc++;
-          if (isBusinessDay(d, feriados)) du++;
-          d.setDate(d.getDate() + 1);
-        }
-        
-        // cálculos financeiros
-        let spot = dolarFuturo - dolarCasado / 1000;
+  lastResult = `Spot: ${spot.toFixed(6)} | Casado: ${taxaPct.toFixed(2)}% | Spread: ${spread.toFixed(2)}%`;
 
-        let taxa =
-          (360 / dc) *
-          ((spot * Math.pow(1 + cdi, du / 252)) / (dolarFuturo - 0.0002) - 1);
+  document.getElementById("out").innerHTML = `
 
-        let taxaPct = taxa * 100;
-        let spread = taxaPct - fedFunds;
+    <div class="label">SPOT</div>
+    <div class="value">${spot.toFixed(6)}</div>
 
-        // saída final
-        document.getElementById("resultado").innerHTML = `
-          
-          <div class="label">SPOT</div>
-          <div class="value">${spot.toFixed(6)}</div>
+    <div class="label">TAXA CASADO</div>
+    <div class="value green">${taxaPct.toFixed(2)}%</div>
 
-          <div class="label">TAXA DO CASADO</div>
-          <div class="value green">${taxaPct.toFixed(2)}%</div>
+    <div class="label">SPREAD</div>
+    <div class="value ${spreadColor(spread)}">${spread.toFixed(2)}%</div>
 
-          <div class="label">SPREAD</div>
-          <div class="value ${corSpread(spread)}">${spread.toFixed(2)}%</div>
+  `;
+}
 
-        `;
-      }
-    </script>
-  </body>
+function copiar(){
+  navigator.clipboard.writeText(lastResult);
+  alert("Resultado copiado!");
+}
+
+</script>
+
+</body>
 </html>
